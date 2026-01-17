@@ -20,18 +20,41 @@ def get_args():
     parser.add_argument("--prompt_ensembling", action='store_true', default=False)
 
     ## MEMORY ##
-    parser.add_argument("--use_memory", type=bool, default=True)
+    # Default is True. Use --use_memory flag to enable, or --no_memory to disable
+    parser.add_argument("--use_memory", action='store_true', dest='use_memory',
+                        help="Use memory bank for concept retrieval (default: True)")
+    parser.add_argument("--no_memory", action='store_false', dest='use_memory',
+                        help="Disable memory bank")
     parser.add_argument("--memory_id", type=str, default=r"coco",help="memory name")
     parser.add_argument("--memory_caption_path", type=str, default='data/memory/coco/memory_captions.json')
     parser.add_argument("--memory_caption_num", type=int, default=5)
+    
+    ## IFCap EF Module Integration ##
+    parser.add_argument("--use_ef_module", action='store_true', default=False, 
+                        help="Use IFCap EF (Frequency-based Entity Filtering) module for concept extraction")
+    parser.add_argument("--ef_filter_method", type=str, default='log_normal', 
+                        choices=['log_normal', 'normal', 'fixed'],
+                        help="EF filtering method: log_normal (log-normal distribution), normal (normal distribution), fixed (fixed threshold)")
+    parser.add_argument("--ef_alpha", type=float, default=1.0,
+                        help="Alpha coefficient for adaptive EF filtering (used in log_normal and normal methods)")
+    parser.add_argument("--ef_fixed_threshold", type=int, default=None,
+                        help="Fixed threshold for EF filtering (used when ef_filter_method='fixed')")
+    parser.add_argument("--ef_max_concepts", type=int, default=10,
+                        help="Maximum number of concepts to extract using EF module")
+    parser.add_argument("--ef_min_freq", type=int, default=1,
+                        help="Minimum frequency requirement for entities in EF module")
+    parser.add_argument("--ef_hybrid", action='store_true', default=False,
+                        help="Use hybrid method: combine EF module with original Parser method")
+    parser.add_argument("--ef_use_parser", type=bool, default=True,
+                        help="Whether to use Parser method in hybrid mode")
 
     ## DATA/MODEL PATH ##
     parser.add_argument('--img_path', type=str, default=r'./image_example')
     parser.add_argument('--output_path', type=str, default=r'./outputs')
-    parser.add_argument('--vl_model', type=str, default=r'G:/HuggingFace/clip-vit-base-patch32')
-    parser.add_argument("--parser_checkpoint", type=str, default=r'G:/HuggingFace/flan-t5-base-VG-factual-sg')
-    parser.add_argument("--wte_model_path", type=str, default=r'G:/HuggingFace/all-Mini-L6-v2')
-    parser.add_argument("--lm_model_path", type=str, default=r'F:/ImageText/MeaCap-family/pretrain_model/CBART_COCO')
+    parser.add_argument('--vl_model', type=str, default=r'/home/cyp/project/mea_cos/MeaCap/checkpoints/clip-vit-base-patch32/')
+    parser.add_argument("--parser_checkpoint", type=str, default=r'/home/cyp/project/mea_cos/MeaCap/checkpoints/flan-t5-base-VG-factual-sg/')
+    parser.add_argument("--wte_model_path", type=str, default=r'/home/cyp/project/mea_cos/MeaCap/checkpoints/all-MiniLM-L6-v2/')
+    parser.add_argument("--lm_model_path", type=str, default=r'/home/cyp/project/mea_cos/MeaCap/checkpoints/CBART_COCO/')
 
     ## lANGUAGE MODEL CBART ##
     parser.add_argument('--bart', type=str, default='large', choices=['base', 'large'])
@@ -70,5 +93,11 @@ def get_args():
                                                                    '1 for without using casual mask attention for decoder.')
     parser.add_argument('--w', type=float, default=1.0, help='The weight for the encoder loss')
     args = parser.parse_args()
+    
+    # Set default value for use_memory if neither flag was explicitly used
+    # Both --use_memory and --no_memory use dest='use_memory', so we check sys.argv
+    import sys
+    if '--use_memory' not in sys.argv and '--no_memory' not in sys.argv:
+        args.use_memory = True
 
     return args
